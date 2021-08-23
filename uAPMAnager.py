@@ -3,65 +3,73 @@
 
 
 
-lastrequest = "no request yet"
-
 try:
   import usocket as socket
 except:
   import socket
-
 import network
-
 import esp
 esp.osdebug(None)
-
 import gc
 gc.collect()
 
-ssid = 'MicroPython-AP'
-password = 'pass'
+class APManager:
 
-ap = network.WLAN(network.AP_IF)
-ap.active(True)
-ap.config(essid=ssid, password=password)
+  ssid = 'MicroPython-AP'
+  password = 'pass'
 
-while ap.active() == False:
-  pass
+  lastrequest = "no request yet"
 
-print('Connection successful')
-print(ap.ifconfig())
-print("opt1")
 
-def web_page():
-  #html = """<html><head><meta name="viewport" content="width=device-width, initial-scale=1"></head><body><h1>Hello, World!</h1></body></html>"""
-  html = """<p>Please enter your credentials.</p>
-  <form method="get" action="result.query">
-    <label for="ssid">ssid:</label>
-    <input type="text" id="ssid" name="ssid"><br><br>
-    <label for="password">password:</label>
-    <input type="text" id="password" name="password"><br><br>
-    <input type="submit" value="Submit">
-  </form>
+
+  @staticmethod
+  def AccesspointModus():
+    ap = network.WLAN(network.AP_IF)
+    ap.active(True)
+    ap.config(essid=APManager.ssid, password=APManager.password)
+
+    while not ap.active():
+      pass
+
+    print('Started AccessPoint')
+    print(ap.ifconfig())
+
+    print("Started socket")
+    sock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+    sock.bind(('', 80))
+    sock.listen(5)
+
+    while True:
+      conn, addr = sock.accept()
+      print('Got a connection from %s' % str(addr))
+      request = conn.recv(1024)
+      APManager.lastrequest = str(request)
+      # print('Content = %s' % str(request))
+      response = APManager.processRequest(str(request))
+      conn.send(response)
+      conn.close()
+
+  @staticmethod
+  def web_page():
+    return """<p>Please enter your credentials.</p>
+    <form method="get" action="result.query">
+      <label for="ssid">ssid:</label>
+      <input type="text" id="ssid" name="ssid"><br><br>
+      <label for="password">password:</label>
+      <input type="text" id="password" name="password"><br><br>
+      <input type="submit" value="Submit">
+    </form>
   
-  
-  
-  """ + " last request was " + lastrequest
-  return html
+    """ + "\n\n\n\n\n\n\n last request was " + APManager.lastrequest
 
-print("starting socket")
-s = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
-s.bind(('', 80))
-s.listen(5)
+  @staticmethod
+  def processRequest(req):
+    if "ssid" in req:
+      # TODO filter for result.query and extract ssid/password
+      return APManager.web_page()
+    else:
+      return APManager.web_page()
+
+APManager.AccesspointModus()
 
 
-# TODO filter for result.query and extract ssid/password
-
-while True:
-  conn, addr = s.accept()
-  print('Got a connection from %s' % str(addr))
-  request = conn.recv(1024)
-  lastrequest = str(request)
-  #print('Content = %s' % str(request))
-  response = web_page()
-  conn.send(response)
-  conn.close()
