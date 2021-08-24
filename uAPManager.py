@@ -15,8 +15,8 @@ gc.collect()
 
 class APManager:
 
-  ssid = 'MicroPython-AP'
-  password = 'pass'
+  ssid = 'MPAP'
+  password = '123456789'
 
   lastrequest = "no request yet"
 
@@ -27,6 +27,7 @@ class APManager:
     ap = network.WLAN(network.AP_IF)
     ap.active(True)
     ap.config(essid=APManager.ssid, password=APManager.password)
+    ap.config(authmode=3)
 
     while not ap.active():
       pass
@@ -34,11 +35,11 @@ class APManager:
     print('Started AccessPoint')
     print(ap.ifconfig())
 
-    print("Started socket")
+    print("Starting socket")
     sock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
     sock.bind(('', 80))
     sock.listen(5)
-
+    print("socket listening")
     while True:
       conn, addr = sock.accept()
       print('Got a connection from %s' % str(addr))
@@ -65,6 +66,9 @@ class APManager:
   @staticmethod
   def processRequest(req):
     if "ssid" in req:
+      targetSsid = str(req).split("ssid=")[1].split("&")[0]
+      targetPass = str(req).split("password=")[1].split(" HTTP")[0]
+      APManager.lastrequest = "recv ssid = *" + targetSsid + "*\nrecv pass = *" + targetPass + "*"
       # TODO filter for result.query and extract ssid/password
       return APManager.web_page()
     else:
